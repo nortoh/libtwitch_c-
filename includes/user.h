@@ -7,6 +7,7 @@ using namespace std;
 #define __USER_H__
 class User {
     public:
+        User() {};
         User(string, Channel);
         string get_name();
         Channel get_channel();
