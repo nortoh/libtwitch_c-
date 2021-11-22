@@ -17,10 +17,10 @@ done
 shift $((OPTIND -1))
 
 echo "Cleaning"
-make clean .. 1> /dev/null
+make clean  1> /dev/null
 
 echo "Making"
-make .. 1> /dev/null
+make 1> /dev/null
 
 if [[ $USE_LOGGING == 1 ]]; then
     echo "Using logging to $LOG_FILE"
