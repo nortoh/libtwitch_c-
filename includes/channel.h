@@ -5,6 +5,7 @@ using namespace std;
 #define __CHANNEL_H__
 class Channel {
     public:
+        Channel(string name = "#?");
         string name();
         void set_name(string name);
     private:

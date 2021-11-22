@@ -4,10 +4,14 @@
 
 using namespace std;
 
+Channel::Channel(string name) {
+    this->channel_name = name;
+}
+
 void Channel::set_name(string name) {
-    channel_name = name;
+    this->channel_name = name;
 }
 
 string Channel::name() {
-    return channel_name;
+    return this->channel_name;
 }
