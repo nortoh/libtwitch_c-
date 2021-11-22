@@ -2,3 +2,4 @@
 logs/
 *.log
 bin/
+bot.config
