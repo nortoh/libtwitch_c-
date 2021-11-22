@@ -17,10 +17,10 @@ done
 shift $((OPTIND -1))
 
 echo "Cleaning"
-make clean 1> /dev/null
+make clean .. 1> /dev/null
 
 echo "Making"
-make 1> /dev/null
+make .. 1> /dev/null
 
 if [[ $USE_LOGGING == 1 ]]; then
     echo "Using logging to $LOG_FILE"
@@ -32,16 +32,16 @@ if [[ $USE_VALGRIND == 1 ]]; then
     echo "################################"
     
     if [[ $USE_LOGGING == 1 ]]; then
-        valgrind --leak-check=yes ./main > $LOG_FILE
+        valgrind --leak-check=yes ./bin/main > $LOG_FILE
     else
-        valgrind --leak-check=yes ./main
+        valgrind --leak-check=yes ./bin/main
     fi
 else
     echo "Running normally"
     echo "################################"
     if [[ $USE_LOGGING == 1 ]]; then
-        ./main > $LOG_FILE
+        ./bin/main > $LOG_FILE
     else
-        ./main
+        ./bin/main
     fi
 fi
