@@ -88,6 +88,11 @@ void start_connection() {
     send_raw(username);
     send_raw(nickname);
 
+    // Caps
+    send_raw("CAP REQ :twitch.tv/commands\r\n");
+    send_raw("CAP REQ :twitch.tv/tags\r\n");
+    send_raw("CAP REQ :twitch.tv/membership\r\n");
+
     send_raw("JOIN #xqcow\r\n");
 
     int more_flag = 0;
@@ -99,6 +104,7 @@ void start_connection() {
                 cout << "Not receiving any data\n";
                 break;
             }
+
             // Check if our buffer ends with /r/n
             int newline_flag = recv_buffer[bytes_recv - 1] == '\n';
             int carriage_flag = recv_buffer[bytes_recv - 2] == '\r';
@@ -121,25 +127,14 @@ void start_connection() {
             // Add null termination 
             full_buffer[full_buffer_size - 1] = '\0';
             full_buffer_size = 0;
-            
+
             list<string> line = Utils::split(string(full_buffer), "\r\n");
 
             while(!line.empty()) {
-                cout << line.front() << "\n";
-                
-                // string data = Utils::clear_newlines(line.front());
-                // cout << "> " << data << "\n";
+                cout << "> " << line.front() << "\n";
                 line.pop_front();
             }
             cout << "----------------------------------------------------------\n";
-
-            // char* token;
-            // char* result;
-
-            // for(token = strtok_r(full_buffer, "\r\n", &result); token != 0; token = strtok_r(0, "\r\n", &result)) {
-            //     // struct irc_message_t irc_message = create_irc_message(token);
-            //     // handle(irc_message);
-            // }
             
             // Clear memory when we are done
             memset(full_buffer, 0, sizeof(full_buffer));
