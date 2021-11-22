@@ -8,18 +8,22 @@ using namespace std;
 
 list<string> Utils::split(string input, string delim) {
     list<string> result;
-    char input_chars[input.length() + 1];
-    char delim_chars[delim.length() + 1];
-    input.copy(input_chars, sizeof(input_chars), 0);
-    delim.copy(delim_chars, sizeof(delim_chars), 0);
+    char input_chars[input.length()];
+    char delim_chars[delim.length()];
+    
+    size_t input_len = input.copy(input_chars, sizeof(input_chars), 0);
+    size_t delim_len = delim.copy(delim_chars, sizeof(delim_chars), 0);
+
+    input_chars[input_len] = '\0';
+    delim_chars[delim_len] = '\0';
 
     char* save;
     char* line;
 
-    line = strtok_r(input_chars, delim.c_str(), &save);
+    line = strtok_r(input_chars, delim_chars, &save);
     while(line != 0) {
         result.push_back(line);
-        line = strtok_r(0, delim.c_str(), &save);
+        line = strtok_r(0, delim_chars, &save);
     }
     return result;
 }
