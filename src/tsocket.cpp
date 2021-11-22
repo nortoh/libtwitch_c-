@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <cstring>
+#include <list>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
@@ -11,6 +12,10 @@ using namespace std;
 
 static int sock = 0;
 static struct sockaddr_in serv_addr;
+static size_t bytes_recv = 0, full_buffer_size = 0;
+static char recv_buffer[512]; // 512B
+static char full_buffer[1024 * 5]; // 5KB
+
 
 int send_raw(char* raw) {
     if(!sock) return -1;
@@ -44,6 +49,24 @@ int conn(string host, int port) {
     return 1;
 }
 
+void receive_full_chunk(int* more) {
+    
+    // Clear the recv_buffer before reading in more
+    memset(recv_buffer, 0, sizeof(recv_buffer));
+
+    if((bytes_recv = recv(sock, recv_buffer, sizeof(recv_buffer), 0)) > 0) {
+        int newline_flag = recv_buffer[bytes_recv - 1] == '\n';
+        int carriage_flag = recv_buffer[bytes_recv - 2] == '\r';
+
+        memmove(full_buffer + full_buffer_size, recv_buffer, bytes_recv * sizeof(char));
+        full_buffer_size += bytes_recv;
+
+        if(newline_flag && carriage_flag) {
+            *more = 0;
+        }
+    }
+}
+
 void start_connection() {
 
     cout << "Attempting to connect to Twitch...\n";
@@ -65,15 +88,63 @@ void start_connection() {
     send_raw(username);
     send_raw(nickname);
 
-    size_t bytes_recv;
-    char recv_buffer[512];
+    send_raw("JOIN #xqcow\r\n");
+
+    int more_flag = 0;
 
     while(connection > 0) {
         if((bytes_recv = recv(sock, (void *)recv_buffer, sizeof(recv_buffer), 0)) > 0) {
-            cout << "> " << recv_buffer << "\n";
+
+            if(bytes_recv < 0) {
+                cout << "Not receiving any data\n";
+                break;
+            }
+            // Check if our buffer ends with /r/n
+            int newline_flag = recv_buffer[bytes_recv - 1] == '\n';
+            int carriage_flag = recv_buffer[bytes_recv - 2] == '\r';
+
+            // If it does not, dump the recv buffer into the full_buffer
+            // and continue loading more data until /r/n
+            if(!(newline_flag && carriage_flag)) {
+                memmove(full_buffer, recv_buffer, bytes_recv * sizeof(char));
+                full_buffer_size += bytes_recv;
+                more_flag = 1;
+
+                while(more_flag) {
+                    receive_full_chunk(&more_flag);
+                }
+            } else {
+                // We have /r/n, copy the recv_buffer to the full_buffer
+                memmove(full_buffer, recv_buffer, bytes_recv * sizeof(char));
+            }
+
+            // Add null termination 
+            full_buffer[full_buffer_size - 1] = '\0';
+            full_buffer_size = 0;
+            
+            list<string> line = Utils::split(string(full_buffer), "\r\n");
+
+            while(!line.empty()) {
+                cout << line.front() << "\n";
+                
+                // string data = Utils::clear_newlines(line.front());
+                // cout << "> " << data << "\n";
+                line.pop_front();
+            }
+            cout << "----------------------------------------------------------\n";
+
+            // char* token;
+            // char* result;
+
+            // for(token = strtok_r(full_buffer, "\r\n", &result); token != 0; token = strtok_r(0, "\r\n", &result)) {
+            //     // struct irc_message_t irc_message = create_irc_message(token);
+            //     // handle(irc_message);
+            // }
+            
+            // Clear memory when we are done
+            memset(full_buffer, 0, sizeof(full_buffer));
+            memset(recv_buffer, 0, sizeof(recv_buffer));
         }
-        
-        break;
     }
 
     cout << "Closing socket\n";
