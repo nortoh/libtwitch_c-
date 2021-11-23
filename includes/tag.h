@@ -7,7 +7,8 @@ using namespace std;
 class Tag {
     public:
         Tag(string);
-        string get(string key);
+        Tag() {};
+        string get(string);
         string str();
     private:
         string tag_string;

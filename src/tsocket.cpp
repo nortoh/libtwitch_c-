@@ -9,6 +9,8 @@
 #include "../includes/config.h"
 #include "../includes/tsocket.h"
 #include "../includes/user.h"
+#include "../includes/tag.h"
+#include "../includes/message.h"
 
 using namespace std;
 
@@ -23,12 +25,6 @@ static char recv_buffer[512] = {0}; // 512B
 static string message ("");
 static size_t message_size (0);
 
-int send_raw(char* raw) {
-    if(!sock) return -1;
-    cout << "< " << raw;
-    return send(sock, raw, strlen(raw), 0);
-}
-
 int send_raw_str(string raw) {
     if(!sock) return -1;
     cout << "< " << raw.c_str();
@@ -36,26 +32,36 @@ int send_raw_str(string raw) {
 }
 
 IRC_TYPE irc_2_type(string line) {
-    bool has_privmsg = line.find("PRIVMSG") != std::string::npos;
+    bool has_cap = line.find("CAP") != std::string::npos;
     bool has_join = line.find("JOIN") != std::string::npos;
     bool has_part = line.find("PART") != std::string::npos;
     bool has_ping = line.find("PING") != std::string::npos;
-    bool has_cap = line.find("CAP") != std::string::npos;
+    bool has_privmsg = line.find("PRIVMSG") != std::string::npos;
+    bool has_usernotice = line.find("USERNOTICE") != std::string::npos;
+    bool has_clearchat = line.find("CLEARCHAT") != std::string::npos;
+    bool has_clearmsg = line.find("CLEARMSG") != std::string::npos;
+    bool has_notice = line.find("NOTICE") != std::string::npos;
+    bool has_roomstate = line.find("ROOMSTATE") != std::string::npos;
 
     if(has_privmsg) return IRC_TYPE::PRIVMSG;
     if(has_join && !has_privmsg) return IRC_TYPE::JOIN;
     if(has_part && !has_privmsg) return IRC_TYPE::PART;
     if(has_ping && !has_privmsg) return IRC_TYPE::PING;
     if(has_cap && !has_privmsg) return IRC_TYPE::CAP;
+    if(has_usernotice && !has_privmsg) return IRC_TYPE::USERNOTICE;
+    if(has_clearchat && !has_privmsg) return IRC_TYPE::CLEARCHAT;
+    if(has_clearmsg && !has_privmsg) return IRC_TYPE::CLEARMSG;
+    if(has_notice && !has_privmsg) return IRC_TYPE::NOTICE;
+
     return IRC_TYPE::UNKNOWN;
 }
 
 void handle_privmsg(string line) {
     list<string> parts = Utils::split(line, " ");
 
-    string tag = "";
-    string username = "";
-    string chan_name = "";
+    string _tag = "";
+    string _user = "";
+    string _channel = "";
 
     int building = 0;
     int count = 0;
@@ -63,18 +69,18 @@ void handle_privmsg(string line) {
         switch(count) {
             case 0:
                 // Tag
-                tag = parts.front();
+                _tag = parts.front();
                 break;
             case 1:
                 // Username
-                username = parts.front().substr(1, parts.front().find("!") - 1);
+                _user = parts.front().substr(1, parts.front().find("!") - 1);
                 break;
             case 2:
                 // IRC Type
                 break;
             case 3:
                 // Channel name
-                chan_name = parts.front();
+                _channel = parts.front();
                 break;
             default:
 
@@ -96,20 +102,18 @@ void handle_privmsg(string line) {
         parts.pop_front();
         count++;
     }
-    parts.clear();
-    
     message[message_size - 1] = '\0';
+    
 
-    cout << "Tag: " << tag << "\n";
-    cout << "Username: " << username.substr(0, username.find("!") - 1) << "\n";
-    cout << "Message: " << message.substr(1, message.length() - 2) << "\n";
-
-    Channel channel (chan_name);
-    User user (username, channel);
-    cout << "Channel: " << channel.name() << "\n";
-    cout << "User: " << user.name() << "\n";
+    Channel channel (_channel);
+    User user (_user, channel);
+    Tag tag (_tag);
+    Message msg (channel, user, tag, message.substr(1, message.length() - 2));
+    
+    msg.print();
 
     message.clear();
+    parts.clear();
 }
 
 void handle_ping(string line) {
@@ -128,8 +132,12 @@ void handle_cap(string line) {
 
 }
 
+void handle_notice(string line) {
+
+}
+
 void handle_line(string line) {
-    cout << "> " << line << "\n";
+    // cout << "> " << line << "\n";
 
     IRC_TYPE type = irc_2_type(line);
     switch(type) {
@@ -148,6 +156,9 @@ void handle_line(string line) {
         case IRC_TYPE::PING:
             handle_ping(line);
             break;
+        case IRC_TYPE::NOTICE:
+            handle_notice(line);
+            break;            
     }
 }
 
@@ -193,7 +204,6 @@ void receive_chunk(int* more, string* buffer, size_t* size) {
 }
 
 void start_connection() {
-
     cout << "Attempting to connect to Twitch...\n";
 
     int connection = conn("44.226.36.141", 6667);
@@ -204,22 +214,15 @@ void start_connection() {
     }
 
     // Do some authentication
-    char password[64];
-    char username[64];
-    char nickname[64];
-    sprintf(password, "PASS %s\r\n", Configuration::get("oauth_key").c_str());
-    sprintf(username, "USER %s\r\n", Configuration::get("username").c_str());
-    sprintf(nickname, "NICK %s\r\n", Configuration::get("username").c_str());
-
-    send_raw(password);
-    send_raw(username);
-    send_raw(nickname);
+    send_raw_str(string("PASS ").append(Configuration::get("oauth_key").append("\r\n")));
+    send_raw_str(string("USER ").append(Configuration::get("username").append("\r\n")));
+    send_raw_str(string("NICK ").append(Configuration::get("username").append("\r\n")));
 
     // Caps
     send_raw_str("CAP REQ :twitch.tv/commands\r\n");
     send_raw_str("CAP REQ :twitch.tv/tags\r\n");
     send_raw_str("CAP REQ :twitch.tv/membership\r\n");
-
+    
     send_raw_str("JOIN #xqcow\r\n");
     send_raw_str("JOIN #ludwig\r\n");
     send_raw_str("JOIN #hasanabi\r\n");
@@ -248,18 +251,16 @@ void start_connection() {
                 buffer += converted_buffer;
                 buffer_size += converted_buffer.length();
             }
-
-            cout << "============================================" << buffer_size << "============================================\n";
             buffer[buffer_size - 2] = '\0';
             buffer[buffer_size - 1] = '\0';
 
             list<string> line = Utils::split(string(buffer), "\n");
-
             while(!line.empty()) {
                 handle_line(line.front());
                 line.pop_front();
             }
 
+            // Clear
             buffer.clear();
             buffer_size = 0;
             memset(recv_buffer, 0, sizeof(recv_buffer));

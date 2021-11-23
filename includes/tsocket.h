@@ -2,12 +2,21 @@
 #define __TSOCKET_H__
 
 enum IRC_TYPE {
-    PRIVMSG,
+    CAP,
     JOIN,
     PART,
     PING,
-    CAP,
-
+    PRIVMSG,
+    CLEARCHAT,
+    ROOMSTATE,
+    USERNOTICE,
+    CTCP,
+    CLEARMSG,
+    NOTICE,
+    USERSTATE,
+    HOSTTARGET,
+    WHISPER,
+    RECONNECT,
     UNKNOWN
 };
 extern void start_connection();

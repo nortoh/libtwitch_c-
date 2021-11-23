@@ -14,8 +14,8 @@ class User {
         User(string, Channel);
         string name();
         Channel channel();
-        void set_name(string name);
-        void set_channel(Channel channel);
+        void set_name(string);
+        void set_channel(Channel);
     private:
         string username;
         Channel chan;

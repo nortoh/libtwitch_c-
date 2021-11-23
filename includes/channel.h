@@ -8,7 +8,7 @@ class Channel {
         Channel() {};
         Channel(string);
         string name();
-        void set_name(string name);
+        void set_name(string);
     private:
         string channel_name;
 };
