@@ -12,13 +12,13 @@ class User {
     public:
         User() {};
         User(string, Channel);
-        string get_name();
-        Channel get_channel();
+        string name();
+        Channel channel();
         void set_name(string name);
         void set_channel(Channel channel);
     private:
         string username;
-        Channel channel;
+        Channel chan;
 };
 
 #endif

@@ -6,7 +6,7 @@ using namespace std;
 
 User::User(string username, Channel channel){
     this->username = username;
-    this->channel = channel;
+    this->chan = channel;
 }
 
 void User::set_name(string name) {
@@ -14,13 +14,13 @@ void User::set_name(string name) {
 }
 
 void User::set_channel(Channel channel) {
-    this->channel = channel;
+    this->chan = channel;
 }
 
-Channel User::get_channel() {
-    return this->channel;
+Channel User::channel() {
+    return this->chan;
 }
 
-string User::get_name() {
+string User::name() {
     return this->username;
 }
