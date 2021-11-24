@@ -121,11 +121,51 @@ void handle_ping(string line) {
 }
 
 void handle_join(string line) {
+    list<string> parts = Utils::split(line, " ");
 
-}
+    string _user;
+    string _channel;
+
+    int count = 0;
+    while(!parts.empty()) {
+        switch(count) {
+            case 0:
+                _user = parts.front();
+                break;
+            case 2:
+                _channel = parts.front();
+                break;
+        }
+        count++;
+        parts.pop_front();
+    }
+
+    parts.clear();
+    cout << "JOIN " << _user << "/" << _channel << "\n";
+ }
 
 void handle_part(string line) {
+    list<string> parts = Utils::split(line, " ");
 
+    string _user;
+    string _channel;
+
+    int count = 0;
+    while(!parts.empty()) {
+        switch(count) {
+            case 0:
+                _user = parts.front();
+                break;
+            case 2:
+                _channel = parts.front();
+                break;
+        }
+        count++;
+        parts.pop_front();
+    }
+
+    parts.clear();
+    cout << "PART " << _user << "/" << _channel << "\n";
 }
 
 void handle_cap(string line) {
@@ -137,8 +177,7 @@ void handle_notice(string line) {
 }
 
 void handle_line(string line) {
-    // cout << "> " << line << "\n";
-
+    cout << "Raw: " << line << "\n";
     IRC_TYPE type = irc_2_type(line);
     switch(type) {
         case IRC_TYPE::PRIVMSG:
