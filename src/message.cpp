@@ -1,4 +1,3 @@
-#include <iostream>
 #include <string>
 #include "../includes/channel.h"
 #include "../includes/user.h"
@@ -25,8 +24,4 @@ Tag Message::tag() {
 
 string Message::message() {
     return this->_message;
-}
-
-void Message::print() {
-    cout << "[" << this->channel().name() << "/" << this->user().name() << "]: " << this->message() << "\n";
 }
