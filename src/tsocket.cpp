@@ -11,6 +11,8 @@
 #include "../includes/user.h"
 #include "../includes/tag.h"
 #include "../includes/message.h"
+/* Events*/
+#include "../includes/events/privmsg_event.h"
 
 using namespace std;
 
@@ -24,6 +26,9 @@ static char recv_buffer[512] = {0}; // 512B
 // static size_t message_buffer_size = 0;
 static string message ("");
 static size_t message_size (0);
+
+static bool connected = 0;
+static bool motd = 0;
 
 int send_raw_str(string raw) {
     if(!sock) return -1;
@@ -54,6 +59,25 @@ IRC_TYPE irc_2_type(string line) {
     if(has_notice && !has_privmsg) return IRC_TYPE::NOTICE;
 
     return IRC_TYPE::UNKNOWN;
+}
+
+bool received_id(string line, int id) {
+    list<string> parts = Utils::split(line, " ");
+
+    int count = 0;
+    int got = 0;
+    while(!parts.empty()) {
+        if(count != 1) {
+            count++;
+            parts.pop_front();
+            continue;
+        }
+        got = stoi(parts.front());
+        break;
+    }
+    parts.clear();
+
+    return got == id;
 }
 
 void handle_privmsg(string line) {
@@ -104,13 +128,12 @@ void handle_privmsg(string line) {
     }
     message[message_size - 1] = '\0';
     
-
     Channel channel (_channel);
     User user (_user, channel);
     Tag tag (_tag);
     Message msg (channel, user, tag, message.substr(1, message.length() - 2));
-    
-    msg.print();
+    PrivmsgEvent privmsg_event (channel, user, tag, msg);
+    privmsg_event.print();
 
     message.clear();
     parts.clear();
@@ -178,6 +201,27 @@ void handle_notice(string line) {
 
 void handle_line(string line) {
     cout << "Raw: " << line << "\n";
+
+    if(!connected) {
+        connected = received_id(line, 1);
+        if(connected) {
+            cout << "Received welcome!\n";
+        } else {
+            return;
+        }
+    }
+
+    if(!motd) {
+        motd = received_id(line, 376);
+        if(motd) {
+            printf("End of MOTD\n");
+            send_raw_str("JOIN #xqcow\r\n");
+            send_raw_str("JOIN #ludwig\r\n");
+            send_raw_str("JOIN #hasanabi\r\n");
+        }
+        return;
+    }
+
     IRC_TYPE type = irc_2_type(line);
     switch(type) {
         case IRC_TYPE::PRIVMSG:
@@ -261,10 +305,6 @@ void start_connection() {
     send_raw_str("CAP REQ :twitch.tv/commands\r\n");
     send_raw_str("CAP REQ :twitch.tv/tags\r\n");
     send_raw_str("CAP REQ :twitch.tv/membership\r\n");
-    
-    send_raw_str("JOIN #xqcow\r\n");
-    send_raw_str("JOIN #ludwig\r\n");
-    send_raw_str("JOIN #hasanabi\r\n");
 
     int more = 0;
 

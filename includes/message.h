@@ -10,7 +10,7 @@ using namespace std;
 class Message {
     public:
         Message(Channel, User, Tag, string);
-        void print();
+        Message() {};
         Channel channel();
         User user();
         Tag tag();
