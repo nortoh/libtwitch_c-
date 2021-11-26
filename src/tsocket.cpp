@@ -10,6 +10,7 @@
 #include "../includes/tsocket.h"
 #include "../includes/user.h"
 #include "../includes/tag.h"
+#include "../includes/channel.h"
 #include "../includes/message.h"
 /* Events*/
 #include "../includes/events/privmsg_event.h"
@@ -20,15 +21,17 @@ static int sock = 0;
 static struct sockaddr_in serv_addr;
 static size_t bytes_recv = 0;
 static char recv_buffer[512] = {0}; // 512B
-// static char full_buffer[1024 * 5] = {0}; // 5KB
 
-// static char message_buffer[1024] = {0}; // 3KB
-// static size_t message_buffer_size = 0;
-static string message ("");
+static string message_buffer ("");
 static size_t message_size (0);
 
 static bool connected = 0;
 static bool motd = 0;
+
+static Channel channel;
+static User user;
+static Message message;
+static Tag tag;
 
 int send_raw_str(string raw) {
     if(!sock) return -1;
@@ -113,11 +116,11 @@ void handle_privmsg(string line) {
                 if(!building) {
                     building = 1;
 
-                    message += (part).append(" ");
-                    message_size += message.length();
+                    message_buffer += (part).append(" ");
+                    message_size += message_buffer.length();
                 } else {
-                    message += (part).append(" ");
-                    message_size += message.length();
+                    message_buffer += (part).append(" ");
+                    message_size += message_buffer.length();
                 }
                 break;
         }
@@ -126,16 +129,17 @@ void handle_privmsg(string line) {
         parts.pop_front();
         count++;
     }
-    message[message_size - 1] = '\0';
+    message_buffer[message_size - 1] = '\0';
     
-    Channel channel (_channel);
-    User user (_user, channel);
-    Tag tag (_tag);
-    Message msg (channel, user, tag, message.substr(1, message.length() - 2));
-    PrivmsgEvent privmsg_event (channel, user, tag, msg);
+    channel = Channel(_channel);
+    user = User(_user, channel);
+    tag = Tag(_tag);
+    message = Message(channel, user, tag, message_buffer.substr(1, message_buffer.length() - 2));
+    PrivmsgEvent privmsg_event (channel, user, tag, message);
+
     privmsg_event.print();
 
-    message.clear();
+    message_buffer.clear();
     parts.clear();
 }
 
@@ -200,12 +204,9 @@ void handle_notice(string line) {
 }
 
 void handle_line(string line) {
-    cout << "Raw: " << line << "\n";
-
     if(!connected) {
         connected = received_id(line, 1);
         if(connected) {
-            cout << "Received welcome!\n";
         } else {
             return;
         }
@@ -214,7 +215,6 @@ void handle_line(string line) {
     if(!motd) {
         motd = received_id(line, 376);
         if(motd) {
-            printf("End of MOTD\n");
             send_raw_str("JOIN #xqcow\r\n");
             send_raw_str("JOIN #ludwig\r\n");
             send_raw_str("JOIN #hasanabi\r\n");
@@ -286,16 +286,7 @@ void receive_chunk(int* more, string* buffer, size_t* size) {
     }
 }
 
-void start_connection() {
-    cout << "Attempting to connect to Twitch...\n";
-
-    int connection = conn("44.226.36.141", 6667);
-
-    sleep(1);
-    if(connection < 0) {
-        cout << "Error connecting to twitch\n";
-    }
-
+void caps_and_auth() {
     // Do some authentication
     send_raw_str(string("PASS ").append(Configuration::get("oauth_key").append("\r\n")));
     send_raw_str(string("USER ").append(Configuration::get("username").append("\r\n")));
@@ -305,6 +296,23 @@ void start_connection() {
     send_raw_str("CAP REQ :twitch.tv/commands\r\n");
     send_raw_str("CAP REQ :twitch.tv/tags\r\n");
     send_raw_str("CAP REQ :twitch.tv/membership\r\n");
+}
+
+void start_connection() {
+    // Clear garbage out of recv buffer
+    memset(recv_buffer, 0, sizeof(recv_buffer));
+
+    cout << "Attempting to connect to Twitch...\n";
+
+    int connection = conn("44.226.36.141", 6667);
+
+    // Sleep a second to give time for the server to process our connection
+    sleep(1);
+    if(connection < 0) {
+        cout << "Error connecting to twitch\n";
+    }
+
+    caps_and_auth();
 
     int more = 0;
 
