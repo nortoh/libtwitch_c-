@@ -3,6 +3,7 @@
 #include "../message.h"
 #include "../tag.h"
 #include "../user.h"
+#include "../channel.h"
 
 using namespace std;
 
