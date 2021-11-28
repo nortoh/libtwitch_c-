@@ -35,3 +35,11 @@ string Utils::clear_newlines(string input) {
     }
     return input;
 }
+
+string Utils::clear_whitespaces(string input) {
+    size_t pos = 0;
+    while((pos = input.find(" ")) != string::npos) {
+        input.erase(pos, 1);
+    }
+    return input;
+}

@@ -17,7 +17,7 @@ class Event {
         };
         Event(EventType);
         EventType type();
-        virtual void print();
+        virtual void print() {};
     private:
         string s;
         EventType _type;

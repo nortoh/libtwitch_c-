@@ -10,6 +10,7 @@ class Utils {
     public:
         static list<string> split(string input, string delim);
         static string clear_newlines(string input);
+        static string clear_whitespaces(string);
 };
 
 #endif

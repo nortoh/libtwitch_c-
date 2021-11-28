@@ -1,5 +1,7 @@
 .vscode/
 logs/
+objs/
+
 *.log
 bin/
 bot.config
